@@ -1,0 +1,17 @@
+---
+description: Accesibilidad AA del frontend público
+globs: src/**/*.vue
+alwaysApply: false
+---
+
+# Accesibilidad
+
+- Cada control tiene label visible, asociado con `for`/`id` o envolviendo el input.
+- El foco se ve. El orden de tabulación sigue el orden visual.
+- Contraste AA. No uses solo el color para indicar postura o error.
+- Los botones de votación anuncian la acción, no un icono suelto.
+
+```vue
+<label for="nick">Nick</label>
+<input id="nick" name="nick" type="text" autocomplete="username" />
+```

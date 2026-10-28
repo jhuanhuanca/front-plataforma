@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Montserrat", "Segoe UI", sans-serif;
+  --color-canvas: #f4f7fb;
+  --color-ink: #0b3d44;
+  --color-brand: #0b3d91;
+  --color-brand-deep: #082a66;
+  --color-brand-soft: #e7f1fb;
+  --color-tech: #0096d6;
+  --color-accent: #ff6a00;
+  --color-lagoon: #00b3a4;
+}

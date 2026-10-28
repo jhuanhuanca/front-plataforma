@@ -1,0 +1,19 @@
+---
+description: Reglas del frontend Vue
+globs: src/**/*.vue,src/**/*.ts
+alwaysApply: false
+---
+
+# Frontend Vue
+
+- `<script setup lang="ts">`. Props y emits tipados. `defineModel()` para v-model propio.
+- Pinia por feature. Composables con prefijo `use`. Rutas con import dinámico.
+- Nada de `any`: usa `unknown` y estrecha el tipo.
+- No mutar props. Estados de carga y de error visibles.
+- La URL de la API sale de `import.meta.env.VITE_API_URL`.
+
+```ts
+const routes = [
+  { path: '/', component: () => import('../views/HomeView.vue') },
+]
+```
