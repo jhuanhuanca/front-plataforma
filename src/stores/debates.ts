@@ -2,6 +2,8 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import axios from 'axios'
 import { firstApiMessage, readApiErrors } from '../api/auth'
+import { mediaUrl } from '../lib/mediaUrl'
+import { useAuthStore } from './auth'
 import {
   applyArgumentUpdates,
   applyFeedArguments,
@@ -238,7 +240,7 @@ export const useDebateStore = defineStore('debates', () => {
       comment.replies.push({
         id: `local-${Date.now()}`,
         author: 'Tú',
-        avatar: avatarFallback(),
+        avatar: currentAvatar(),
         time: 'ahora',
         body: text,
         likes: 0,
@@ -262,7 +264,10 @@ export const useDebateStore = defineStore('debates', () => {
     }
   }
 
-  async function addPost(body: string): Promise<ActionResult> {
+  async function addPost(
+    body: string,
+    media: { kind: 'image' | 'video'; file: File | null; link: string } | null = null,
+  ): Promise<ActionResult> {
     const text = body.trim()
     if (text.length < 8) {
       return { ok: false, message: 'El argumento necesita al menos 8 caracteres.' }
@@ -273,12 +278,12 @@ export const useDebateStore = defineStore('debates', () => {
     }
 
     if (!remote.value) {
-      pushLocalPost(text)
+      pushLocalPost(text, media)
       return { ok: true, message: 'Argumento publicado en este navegador.' }
     }
 
     try {
-      const post = await createDebate(text)
+      const post = await createDebate(text, media ?? undefined)
       items.value.unshift(post)
 
       return { ok: true, message: 'Argumento publicado en el feed.' }
@@ -315,7 +320,7 @@ export const useDebateStore = defineStore('debates', () => {
     post.comments.unshift({
       id: `local-${Date.now()}`,
       author: 'Tú',
-      avatar: avatarFallback(),
+      avatar: currentAvatar(),
       time: 'ahora',
       body: text,
       likes: 0,
@@ -327,16 +332,22 @@ export const useDebateStore = defineStore('debates', () => {
     })
   }
 
-  function pushLocalPost(text: string): void {
+  function pushLocalPost(
+    text: string,
+    media: { kind: 'image' | 'video'; file: File | null; link: string } | null,
+  ): void {
+    const link = media?.link.trim() ?? ''
+    const image = media?.file ? URL.createObjectURL(media.file) : link
+
     items.value.unshift({
       id: `post-${Date.now()}`,
       author: 'Tú',
       role: 'Participante',
-      avatar: avatarFallback(),
+      avatar: currentAvatar(),
       time: 'ahora',
       body: text,
-      image: '',
-      kind: 'image',
+      image,
+      kind: media && image !== '' ? media.kind : 'image',
       likes: 0,
       shares: 0,
       liked: false,
@@ -584,6 +595,10 @@ function failureMessage(cause: unknown): string {
   }
 
   return firstApiMessage(readApiErrors(cause))
+}
+
+function currentAvatar(): string {
+  return mediaUrl(useAuthStore().avatar) || avatarFallback()
 }
 
 function avatarFallback(): string {

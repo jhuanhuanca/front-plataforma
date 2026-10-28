@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import BrandLogo from '../brand/BrandLogo.vue'
 import AppIcon from '../ui/AppIcon.vue'
 import NotificationBell from './NotificationBell.vue'
+import { mediaUrl } from '../../lib/mediaUrl'
 import { useAuthStore } from '../../stores/auth'
 import { useDebateStore } from '../../stores/debates'
 
@@ -12,6 +13,7 @@ const router = useRouter()
 const debates = useDebateStore()
 const auth = useAuthStore()
 const menuOpen = ref(false)
+const headerAvatar = computed(() => mediaUrl(auth.avatar) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=70')
 
 const links = [
   { to: '/', label: 'Inicio', match: 'home' },
@@ -120,7 +122,7 @@ function submitSearch(): void {
         </div>
         <RouterLink to="/cuenta" class="h-10 w-10 overflow-hidden rounded-full bg-slate-200" aria-label="Tu cuenta">
           <img
-            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=70"
+            :src="headerAvatar"
             alt=""
             class="h-full w-full object-cover"
           />

@@ -4,6 +4,8 @@ import { api } from './client'
 export interface AuthUser {
   id: number
   nick: string
+  avatar?: string | null
+  cover?: string | null
 }
 
 export interface AuthSession {
@@ -41,6 +43,22 @@ export async function loginAccount(nick: string, password: string): Promise<Auth
 
 export async function logoutAccount(): Promise<void> {
   await api.post('/auth/logout')
+}
+
+export async function updateAvatar(file: File): Promise<AuthUser> {
+  const form = new FormData()
+  form.append('avatar', file)
+  const response = await api.post<{ data: AuthUser }>('/me/avatar', form)
+
+  return response.data.data
+}
+
+export async function updateCover(file: File): Promise<AuthUser> {
+  const form = new FormData()
+  form.append('cover', file)
+  const response = await api.post<{ data: AuthUser }>('/me/cover', form)
+
+  return response.data.data
 }
 
 export async function deleteAccount(nick: string): Promise<void> {

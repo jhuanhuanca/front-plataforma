@@ -6,7 +6,8 @@ import DeleteAccount from '../components/account/DeleteAccount.vue'
 import ConnectionList from '../components/account/ConnectionList.vue'
 import FriendGrid from '../components/account/FriendGrid.vue'
 import AppIcon from '../components/ui/AppIcon.vue'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { mediaUrl } from '../lib/mediaUrl'
 import { useRouter } from 'vue-router'
 import { fetchStanding } from '../api/standing'
 import { useAccountStore } from '../stores/account'
@@ -17,6 +18,21 @@ const auth = useAuthStore()
 const router = useRouter()
 const silenced = ref(false)
 const silencedUntil = ref<string | null>(null)
+const photoNotice = ref('')
+const shownAvatar = computed(() => mediaUrl(auth.avatar) || profileAvatar)
+const shownCover = computed(() => mediaUrl(auth.cover) || profileCover)
+
+async function changePhoto(file: File): Promise<void> {
+  photoNotice.value = ''
+  const saved = await auth.changeAvatar(file)
+  photoNotice.value = saved ? 'Foto de perfil actualizada.' : auth.error
+}
+
+async function changeCover(file: File): Promise<void> {
+  photoNotice.value = ''
+  const saved = await auth.changeCover(file)
+  photoNotice.value = saved ? 'Foto de portada actualizada.' : auth.error
+}
 
 onMounted(async () => {
   if (!auth.isAuthenticated) {
@@ -82,11 +98,18 @@ const toneClass = {
         role="Mesa de movilidad"
         place="Barrio norte"
         joined="26 de noviembre de 2019"
-        :cover="profileCover"
-        :avatar="profileAvatar"
+        :cover="shownCover"
+        :avatar="shownAvatar"
         :editable="!auth.isAuthenticated"
+        :can-change-photo="auth.isAuthenticated"
         @save="account.saveName"
+        @photo="changePhoto"
+        @cover="changeCover"
       />
+
+      <p v-if="photoNotice" class="rounded-lg bg-white px-4 py-2 text-sm text-slate-700 shadow-sm" role="status">
+        {{ photoNotice }}
+      </p>
 
       <p v-if="account.notice" class="rounded-lg bg-white px-4 py-2 text-sm text-slate-700 shadow-sm" role="status">
         {{ account.notice }}

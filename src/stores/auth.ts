@@ -1,17 +1,21 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import { deleteAccount as deleteAccountRequest, firstApiMessage, loginAccount, logoutAccount, readApiErrors, registerAccount, type AuthUser, type RegisterPayload } from '../api/auth'
+import { deleteAccount as deleteAccountRequest, firstApiMessage, loginAccount, logoutAccount, readApiErrors, registerAccount, updateAvatar, updateCover, type AuthUser, type RegisterPayload } from '../api/auth'
 import { ensureDeviceFingerprint } from '../lib/deviceFingerprint'
 
 const tokenKey = 'auth_token'
 const nickKey = 'auth_nick'
 const userKey = 'auth_user_id'
+const avatarKey = 'auth_avatar'
+const coverKey = 'auth_cover'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem(tokenKey))
   const nick = ref<string | null>(localStorage.getItem(nickKey))
   const userId = ref<string | null>(localStorage.getItem(userKey))
+  const avatar = ref<string | null>(localStorage.getItem(avatarKey))
+  const cover = ref<string | null>(localStorage.getItem(coverKey))
   const loading = ref(false)
   const error = ref('')
   const fieldErrors = ref<Record<string, string[]>>({})
@@ -25,15 +29,41 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem(tokenKey, nextToken)
     localStorage.setItem(nickKey, user.nick)
     localStorage.setItem(userKey, String(user.id))
+    rememberAvatar(user.avatar)
+    rememberCover(user.cover)
+  }
+
+  function rememberAvatar(next: string | null | undefined): void {
+    avatar.value = next && next !== '' ? next : null
+    if (avatar.value) {
+      localStorage.setItem(avatarKey, avatar.value)
+      return
+    }
+
+    localStorage.removeItem(avatarKey)
+  }
+
+  function rememberCover(next: string | null | undefined): void {
+    cover.value = next && next !== '' ? next : null
+    if (cover.value) {
+      localStorage.setItem(coverKey, cover.value)
+      return
+    }
+
+    localStorage.removeItem(coverKey)
   }
 
   function clearSession(): void {
     token.value = null
     nick.value = null
     userId.value = null
+    avatar.value = null
+    cover.value = null
     localStorage.removeItem(tokenKey)
     localStorage.removeItem(nickKey)
     localStorage.removeItem(userKey)
+    localStorage.removeItem(avatarKey)
+    localStorage.removeItem(coverKey)
   }
 
   function applyError(cause: unknown): void {
@@ -82,6 +112,40 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function changeAvatar(file: File): Promise<boolean> {
+    loading.value = true
+    error.value = ''
+    fieldErrors.value = {}
+
+    try {
+      const user = await updateAvatar(file)
+      rememberAvatar(user.avatar)
+      return true
+    } catch (cause) {
+      applyError(cause)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function changeCover(file: File): Promise<boolean> {
+    loading.value = true
+    error.value = ''
+    fieldErrors.value = {}
+
+    try {
+      const user = await updateCover(file)
+      rememberCover(user.cover)
+      return true
+    } catch (cause) {
+      applyError(cause)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function logout(): Promise<void> {
     loading.value = true
     error.value = ''
@@ -121,12 +185,16 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     nick,
     userId,
+    avatar,
+    cover,
     loading,
     error,
     fieldErrors,
     isAuthenticated,
     register,
     login,
+    changeAvatar,
+    changeCover,
     logout,
     removeAccount,
     clearSession,

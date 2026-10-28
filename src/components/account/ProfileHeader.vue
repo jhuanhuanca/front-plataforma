@@ -12,12 +12,15 @@ const props = withDefaults(
     cover: string
     avatar: string
     editable?: boolean
+    canChangePhoto?: boolean
   }>(),
-  { editable: true },
+  { editable: true, canChangePhoto: false },
 )
 
 const emit = defineEmits<{
   save: [name: string]
+  photo: [file: File]
+  cover: [file: File]
 }>()
 
 const editing = ref(false)
@@ -34,18 +37,68 @@ function save(): void {
   emit('save', draft.value)
   editing.value = false
 }
+
+function onPhoto(event: Event): void {
+  const input = event.target
+  if (!(input instanceof HTMLInputElement) || input.files === null || input.files.length === 0) {
+    return
+  }
+
+  emit('photo', input.files[0])
+  input.value = ''
+}
+
+function onCover(event: Event): void {
+  const input = event.target
+  if (!(input instanceof HTMLInputElement) || input.files === null || input.files.length === 0) {
+    return
+  }
+
+  emit('cover', input.files[0])
+  input.value = ''
+}
 </script>
 
 <template>
   <section class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200/80">
-    <img :src="cover" alt="" class="h-36 w-full object-cover sm:h-48" />
+    <div class="relative">
+      <img :src="cover" alt="" class="h-36 w-full object-cover sm:h-48" />
+      <label
+        v-if="canChangePhoto"
+        class="absolute bottom-3 right-3 inline-flex cursor-pointer items-center gap-2 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-ink shadow"
+      >
+        <AppIcon name="pencil" class="h-4 w-4" />
+        Cambiar portada
+        <input
+          type="file"
+          class="sr-only"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          @change="onCover"
+        />
+      </label>
+    </div>
     <div class="px-4 pb-4 sm:px-6">
       <div class="-mt-10 flex flex-col items-center text-center sm:mt-0 sm:flex-row sm:items-end sm:text-left">
-        <img
-          :src="avatar"
-          alt=""
-          class="h-24 w-24 rounded-full object-cover ring-4 ring-white sm:-mt-12"
-        />
+        <div class="relative sm:-mt-12">
+          <img
+            :src="avatar"
+            alt=""
+            class="h-24 w-24 rounded-full object-cover ring-4 ring-white"
+          />
+          <label
+            v-if="canChangePhoto"
+            class="absolute bottom-0 right-0 grid h-8 w-8 cursor-pointer place-items-center rounded-full bg-brand text-white shadow"
+          >
+            <span class="sr-only">Cambiar foto de perfil</span>
+            <AppIcon name="pencil" class="h-4 w-4" />
+            <input
+              type="file"
+              class="sr-only"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              @change="onPhoto"
+            />
+          </label>
+        </div>
         <div class="mt-3 min-w-0 sm:mb-1 sm:ml-4 sm:mt-4 sm:flex-1">
           <h1 class="flex items-center justify-center gap-1 text-xl font-semibold sm:justify-start">
             {{ name }}

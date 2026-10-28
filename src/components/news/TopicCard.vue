@@ -16,8 +16,15 @@ const emit = defineEmits<{
 <template>
   <article class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200/80">
     <div v-if="topic.kind !== 'text'" class="relative h-48 bg-slate-200 sm:h-44">
-      <img :src="topic.image" alt="" class="h-full w-full object-cover" loading="lazy" />
-      <template v-if="topic.kind === 'video'">
+      <video
+        v-if="topic.kind === 'video' && (topic.image.startsWith('blob:') || /\.(mp4|webm)(\?|#|$)/i.test(topic.image))"
+        :src="topic.image"
+        controls
+        preload="metadata"
+        class="h-full w-full object-cover"
+      />
+      <img v-else :src="topic.image" alt="" class="h-full w-full object-cover" loading="lazy" />
+      <template v-if="topic.kind === 'video' && !topic.image.startsWith('blob:') && !/\.(mp4|webm)(\?|#|$)/i.test(topic.image)">
         <button
           type="button"
           class="absolute inset-0 grid place-items-center"

@@ -1,9 +1,11 @@
+import { mediaUrl } from '../lib/mediaUrl'
 import { api } from './client'
 import { photo } from '../data/images'
 import type { DebateComment, DebatePost } from '../data/debates'
 
 interface DebateAuthor {
   nick: string | null
+  avatar?: string | null
 }
 
 interface DebateArgumentPayload {
@@ -77,8 +79,25 @@ export async function fetchDebates(): Promise<DebatePost[]> {
   return response.data.data.map(toPost)
 }
 
-export async function createDebate(body: string): Promise<DebatePost> {
-  const response = await api.post<Envelope<DebatePayload>>('/debates', { body })
+export async function createDebate(
+  body: string,
+  media?: { kind: 'image' | 'video'; file: File | null; link: string },
+): Promise<DebatePost> {
+  if (media?.file) {
+    const form = new FormData()
+    form.append('body', body)
+    form.append('kind', media.kind)
+    form.append('media', media.file)
+    const response = await api.post<Envelope<DebatePayload>>('/debates', form)
+
+    return toPost(response.data.data)
+  }
+
+  const response = await api.post<Envelope<DebatePayload>>('/debates', {
+    body,
+    kind: media?.kind ?? 'image',
+    image: media?.link.trim() ? media.link.trim() : null,
+  })
 
   return toPost(response.data.data)
 }
@@ -234,10 +253,10 @@ function toPost(topic: DebatePayload): DebatePost {
     id: String(topic.id),
     author: presentName(nick),
     role: topic.context ?? 'Participante',
-    avatar: avatarFor(nick),
+    avatar: mediaUrl(topic.author.avatar) || avatarFor(nick),
     time: relativeTime(topic.created_at),
     body: topic.body,
-    image: topic.image ?? '',
+    image: mediaUrl(topic.image),
     kind: topic.kind === 'video' ? 'video' : 'image',
     likes: topic.likes,
     shares: topic.shares,
@@ -254,7 +273,7 @@ function toComment(argument: DebateArgumentPayload): DebateComment {
   return {
     id: String(argument.id),
     author: presentName(nick),
-    avatar: avatarFor(nick),
+    avatar: mediaUrl(argument.author.avatar) || avatarFor(nick),
     time: relativeTime(argument.created_at),
     body: argument.body,
     likes: argument.likes,

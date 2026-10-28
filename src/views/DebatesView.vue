@@ -1,23 +1,34 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { activeTopics } from '../data/debates'
 import { photo } from '../data/images'
 import DebateCard from '../components/debate/DebateCard.vue'
 import ArgumentEditor from '../components/debate/ArgumentEditor.vue'
+import MediaAttachment from '../components/debate/MediaAttachment.vue'
 import BrandLogo from '../components/brand/BrandLogo.vue'
 import AppIcon from '../components/ui/AppIcon.vue'
 import { sendToRegister } from '../lib/accountGate'
+import { mediaUrl } from '../lib/mediaUrl'
+import { useAuthStore } from '../stores/auth'
 import { useDebateStore } from '../stores/debates'
 import { useNewsStore } from '../stores/news'
 
 const debates = useDebateStore()
+const auth = useAuthStore()
+const sessionAvatar = computed(() => mediaUrl(auth.avatar) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=70')
+const sessionCover = computed(() => mediaUrl(auth.cover) || photo('photo-1500530855697-b586d89ba3ee', 700))
+const displayName = computed(() => (auth.isAuthenticated && auth.nick ? auth.nick : 'Invitado'))
 const news = useNewsStore()
 const route = useRoute()
 const router = useRouter()
 const draft = ref('')
 const composerError = ref('')
 const notice = ref('')
+const mediaKind = ref<'image' | 'video' | null>(null)
+const mediaLink = ref('')
+const mediaFile = ref<File | null>(null)
+const showCall = ref(false)
 
 const menu = [
   { to: '/debates', label: 'Feed', icon: 'home' as const },
@@ -29,9 +40,66 @@ const menu = [
   { to: '/cuenta', label: 'Ajustes', icon: 'settings' as const },
 ]
 
-async function publish(): Promise<void> {
+function chooseMedia(kind: 'image' | 'video'): void {
+  showCall.value = false
   composerError.value = ''
-  const result = await debates.addPost(draft.value)
+  if (mediaKind.value === kind) {
+    mediaKind.value = null
+    mediaFile.value = null
+    mediaLink.value = ''
+    return
+  }
+
+  mediaFile.value = null
+  mediaLink.value = ''
+  mediaKind.value = kind
+}
+
+function mediaProblem(): string {
+  if (mediaKind.value === null) {
+    return ''
+  }
+
+  const link = mediaLink.value.trim()
+  const file = mediaFile.value
+  if (file && link) {
+    return 'Sube un archivo o pega un enlace, no los dos.'
+  }
+  if (link && !link.startsWith('https://')) {
+    return 'El enlace tiene que empezar por https://.'
+  }
+  if (!file) {
+    return ''
+  }
+
+  const image = mediaKind.value === 'image'
+  const allowed = image
+    ? ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    : ['video/mp4', 'video/webm']
+  if (file.type !== '' && !allowed.includes(file.type)) {
+    return image
+      ? 'La imagen tiene que ser JPG, PNG, WEBP o GIF.'
+      : 'El video tiene que ser MP4 o WebM.'
+  }
+
+  const max = image ? 8 * 1024 * 1024 : 50 * 1024 * 1024
+  if (file.size > max) {
+    return image ? 'La imagen no puede pasar de 8 MB.' : 'El video no puede pasar de 50 MB.'
+  }
+
+  return ''
+}
+
+async function publish(): Promise<void> {
+  composerError.value = mediaProblem()
+  if (composerError.value !== '') {
+    return
+  }
+
+  const media = mediaKind.value === null
+    ? null
+    : { kind: mediaKind.value, file: mediaFile.value, link: mediaLink.value }
+  const result = await debates.addPost(draft.value, media)
   if (result.needsAccount) {
     sendToRegister(router, route)
     return
@@ -42,6 +110,9 @@ async function publish(): Promise<void> {
   }
 
   draft.value = ''
+  mediaKind.value = null
+  mediaLink.value = ''
+  mediaFile.value = null
   notice.value = result.message
 }
 
@@ -122,16 +193,16 @@ async function share(id: string): Promise<void> {
   <div class="mx-auto grid w-full min-w-0 max-w-[1200px] gap-4 px-3 py-3 sm:px-4 sm:py-4 lg:grid-cols-[270px_minmax(0,1fr)_300px]">
     <aside class="hidden space-y-4 lg:sticky lg:top-20 lg:block lg:self-start">
       <section class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200/80">
-        <img :src="photo('photo-1500530855697-b586d89ba3ee', 700)" alt="" class="h-16 w-full object-cover" />
+        <img :src="sessionCover" alt="" class="h-16 w-full object-cover" />
         <div class="-mt-8 px-4 pb-4 text-center">
           <img
-            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=70"
+            :src="sessionAvatar"
             alt=""
             class="mx-auto h-16 w-16 rounded-full object-cover ring-4 ring-white"
           />
-          <h2 class="mt-2 text-lg font-semibold">Invitado</h2>
-          <p class="text-xs text-slate-500">Aún sin nick</p>
-          <p class="mt-2 text-sm text-slate-600">Entra para argumentar, votar y seguir un tema.</p>
+          <h2 class="mt-2 text-lg font-semibold">{{ displayName }}</h2>
+          <p class="text-xs text-slate-500">{{ auth.isAuthenticated ? 'Sesión en este dispositivo' : 'Aún sin nick' }}</p>
+          <p v-if="!auth.isAuthenticated" class="mt-2 text-sm text-slate-600">Entra para argumentar, votar y seguir un tema.</p>
           <dl class="mt-4 grid grid-cols-3 gap-2 text-center">
             <div>
               <dt class="text-xs text-slate-500">Argumentos</dt>
@@ -159,7 +230,10 @@ async function share(id: string): Promise<void> {
           <AppIcon :name="item.icon" class="h-5 w-5 text-slate-500" />
           {{ item.label }}
         </RouterLink>
-        <RouterLink to="/ingresar" class="mt-1 block px-3 py-2 text-center text-sm text-brand">
+        <RouterLink v-if="auth.isAuthenticated" to="/cuenta" class="mt-1 block px-3 py-2 text-center text-sm text-brand">
+          Tu cuenta
+        </RouterLink>
+        <RouterLink v-else to="/ingresar" class="mt-1 block px-3 py-2 text-center text-sm text-brand">
           Entrar
         </RouterLink>
       </nav>
@@ -168,7 +242,7 @@ async function share(id: string): Promise<void> {
     <section class="min-w-0 space-y-3 sm:space-y-4">
       <RouterLink to="/cuenta" class="flex items-center gap-3 px-1 py-1 lg:hidden">
         <BrandLogo variant="mark" decorative />
-        <span class="text-lg font-semibold">Mi perfil</span>
+        <span class="text-lg font-semibold">{{ displayName }}</span>
       </RouterLink>
 
       <p v-if="notice" class="rounded-lg bg-white px-4 py-2 text-sm text-slate-700 shadow-sm" role="status">
@@ -195,29 +269,52 @@ async function share(id: string): Promise<void> {
       <form class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80" @submit.prevent="publish">
         <div class="flex gap-3">
           <img
-            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=70"
+            :src="sessionAvatar"
             alt=""
             class="h-10 w-10 rounded-full object-cover"
           />
           <ArgumentEditor id="nuevo-argumento" v-model="draft" label="Escribe un argumento" placeholder="Escribe un argumento..." />
         </div>
         <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-          <span class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+            :class="mediaKind === 'image' ? 'border-emerald-600 text-emerald-700' : 'border-slate-200 text-slate-700'"
+            :aria-pressed="mediaKind === 'image'"
+            @click="chooseMedia('image')"
+          >
             <AppIcon name="image" class="h-4 w-4 text-emerald-600" />
             Foto
-          </span>
-          <span class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+            :class="mediaKind === 'video' ? 'border-sky-600 text-sky-700' : 'border-slate-200 text-slate-700'"
+            :aria-pressed="mediaKind === 'video'"
+            @click="chooseMedia('video')"
+          >
             <AppIcon name="video" class="h-4 w-4 text-sky-600" />
             Video
-          </span>
-          <RouterLink to="/votaciones" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+            :aria-pressed="showCall"
+            @click="showCall = !showCall; mediaKind = null"
+          >
             <AppIcon name="calendar" class="h-4 w-4 text-rose-500" />
             Convocatoria
-          </RouterLink>
+          </button>
           <button type="submit" class="w-full rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-deep sm:ml-auto sm:w-auto">
             Publicar
           </button>
         </div>
+        <MediaAttachment v-model:kind="mediaKind" v-model:link="mediaLink" v-model:file="mediaFile" />
+        <p v-if="showCall" class="mt-3 text-sm text-slate-600">
+          Una convocatoria es una votación. Sigue en
+          <RouterLink to="/votaciones" class="font-medium text-brand underline">Votaciones</RouterLink>
+          si quieres abrir esa página.
+        </p>
         <p v-if="composerError" class="mt-2 text-sm text-red-700" role="alert">{{ composerError }}</p>
       </form>
 

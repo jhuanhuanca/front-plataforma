@@ -30,7 +30,10 @@ const replyingTo = ref('')
 const replyDraft = ref('')
 const replyError = ref('')
 const openReplies = ref<Record<string, boolean>>({})
-const preview = ref(false)
+
+function playableVideo(url: string): boolean {
+  return url.startsWith('blob:') || /\.(mp4|webm)(\?|#|$)/i.test(url)
+}
 
 function publish(): void {
   if (draft.value.trim().length === 0) {
@@ -116,22 +119,23 @@ function replyCount(comment: DebateComment): number {
     </div>
 
     <div v-if="post.image" class="relative mt-3 overflow-hidden rounded-lg bg-slate-200">
-      <img :src="post.image" alt="" class="max-h-80 w-full max-w-full object-cover" loading="lazy" />
-      <button
-        v-if="post.kind === 'video'"
-        type="button"
-        class="absolute inset-0 grid place-items-center"
-        :aria-pressed="preview"
-        aria-label="Reproducir vista previa"
-        @click="preview = !preview"
+      <video
+        v-if="post.kind === 'video' && playableVideo(post.image)"
+        :src="post.image"
+        controls
+        preload="metadata"
+        class="max-h-80 w-full"
+      />
+      <a
+        v-else-if="post.kind === 'video'"
+        :href="post.image"
+        class="flex items-center gap-2 px-4 py-6 text-sm font-medium text-brand"
+        target="_blank"
+        rel="noopener noreferrer"
       >
-        <span class="grid h-14 w-14 place-items-center rounded-full bg-white/95 text-brand shadow">
-          <AppIcon name="play" class="h-8 w-8" />
-        </span>
-      </button>
-      <p v-if="preview" class="absolute inset-x-3 bottom-3 rounded-md bg-white/95 px-3 py-2 text-sm">
-        Vista previa. El video se publicará cuando la fuente esté verificada.
-      </p>
+        Abrir video
+      </a>
+      <img v-else :src="post.image" alt="" class="max-h-80 w-full max-w-full object-cover" loading="lazy" />
     </div>
 
     <div class="mt-3 flex min-w-0 flex-col gap-2 border-b border-slate-100 pb-3 text-xs text-slate-600 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:text-sm">
