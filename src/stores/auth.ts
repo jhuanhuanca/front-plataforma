@@ -9,6 +9,7 @@ const nickKey = 'auth_nick'
 const userKey = 'auth_user_id'
 const avatarKey = 'auth_avatar'
 const coverKey = 'auth_cover'
+const joinedKey = 'auth_joined'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem(tokenKey))
@@ -16,6 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userId = ref<string | null>(localStorage.getItem(userKey))
   const avatar = ref<string | null>(localStorage.getItem(avatarKey))
   const cover = ref<string | null>(localStorage.getItem(coverKey))
+  const joinedAt = ref<string | null>(localStorage.getItem(joinedKey))
   const loading = ref(false)
   const error = ref('')
   const fieldErrors = ref<Record<string, string[]>>({})
@@ -31,6 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem(userKey, String(user.id))
     rememberAvatar(user.avatar)
     rememberCover(user.cover)
+    rememberJoined(user.created_at)
   }
 
   function rememberAvatar(next: string | null | undefined): void {
@@ -53,17 +56,29 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(coverKey)
   }
 
+  function rememberJoined(next: string | null | undefined): void {
+    joinedAt.value = next && next !== '' ? next : null
+    if (joinedAt.value) {
+      localStorage.setItem(joinedKey, joinedAt.value)
+      return
+    }
+
+    localStorage.removeItem(joinedKey)
+  }
+
   function clearSession(): void {
     token.value = null
     nick.value = null
     userId.value = null
     avatar.value = null
     cover.value = null
+    joinedAt.value = null
     localStorage.removeItem(tokenKey)
     localStorage.removeItem(nickKey)
     localStorage.removeItem(userKey)
     localStorage.removeItem(avatarKey)
     localStorage.removeItem(coverKey)
+    localStorage.removeItem(joinedKey)
   }
 
   function applyError(cause: unknown): void {
@@ -187,6 +202,7 @@ export const useAuthStore = defineStore('auth', () => {
     userId,
     avatar,
     cover,
+    joinedAt,
     loading,
     error,
     fieldErrors,

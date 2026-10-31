@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { accountTabs, profileAvatar, profileCover, profilePhotos } from '../data/profile'
+import { accountTabs } from '../data/profile'
 import ProfileHeader from '../components/account/ProfileHeader.vue'
 import ParticipationSummary from '../components/account/ParticipationSummary.vue'
 import DeleteAccount from '../components/account/DeleteAccount.vue'
 import ConnectionList from '../components/account/ConnectionList.vue'
 import FriendGrid from '../components/account/FriendGrid.vue'
 import AppIcon from '../components/ui/AppIcon.vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { mediaUrl } from '../lib/mediaUrl'
 import { useRouter } from 'vue-router'
 import { fetchStanding } from '../api/standing'
@@ -19,8 +19,44 @@ const router = useRouter()
 const silenced = ref(false)
 const silencedUntil = ref<string | null>(null)
 const photoNotice = ref('')
-const shownAvatar = computed(() => mediaUrl(auth.avatar) || profileAvatar)
-const shownCover = computed(() => mediaUrl(auth.cover) || profileCover)
+const visibleName = ref('')
+const shownAvatar = computed(() => mediaUrl(auth.avatar))
+const shownCover = computed(() => mediaUrl(auth.cover))
+const joinedLabel = computed(() => formatJoined(auth.joinedAt))
+
+watch(
+  () => auth.nick,
+  (nick) => {
+    if (visibleName.value === '' && nick) {
+      visibleName.value = nick
+    }
+  },
+  { immediate: true },
+)
+
+function formatJoined(value: string | null): string {
+  if (!value) {
+    return ''
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  return new Intl.DateTimeFormat('es', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
+}
+
+function saveName(next: string): void {
+  const text = next.trim()
+  if (text.length < 3) {
+    account.notice = 'El nombre visible necesita al menos 3 caracteres.'
+    return
+  }
+
+  visibleName.value = text
+  account.notice = ''
+}
 
 async function changePhoto(file: File): Promise<void> {
   photoNotice.value = ''
@@ -38,6 +74,8 @@ onMounted(async () => {
   if (!auth.isAuthenticated) {
     return
   }
+
+  void account.loadPeople()
 
   try {
     const standing = await fetchStanding()
@@ -93,16 +131,16 @@ const toneClass = {
       <DeleteAccount v-if="auth.isAuthenticated" />
 
       <ProfileHeader
-        :name="auth.isAuthenticated && auth.nick ? auth.nick : account.name"
-        :voices="account.connections.length"
-        role="Mesa de movilidad"
-        place="Barrio norte"
-        joined="26 de noviembre de 2019"
+        :name="visibleName || 'Sin sesión'"
+        :voices="account.listedPeople.length"
+        role=""
+        place=""
+        :joined="joinedLabel"
         :cover="shownCover"
         :avatar="shownAvatar"
-        :editable="!auth.isAuthenticated"
+        :editable="auth.isAuthenticated"
         :can-change-photo="auth.isAuthenticated"
-        @save="account.saveName"
+        @save="saveName"
         @photo="changePhoto"
         @cover="changeCover"
       />
@@ -129,78 +167,59 @@ const toneClass = {
           >
             {{ item.label }}
             <span v-if="item.id === 'conexiones'" class="ml-1 rounded bg-emerald-50 px-1.5 text-xs text-emerald-700">
-              {{ account.connections.length }}
+              {{ account.listedPeople.length }}
             </span>
           </button>
         </div>
 
         <div v-if="account.tab !== 'conexiones'" class="p-4 sm:p-5" role="tabpanel">
-          <div v-if="account.tab === 'publicaciones'" class="space-y-3 text-sm text-slate-700">
-            <p>El borrador del transporte nocturno ya se puede comentar antes de la votación del martes.</p>
-            <p>Si el orden de las obras se decide solo por likes, los barrios con menos gente conectada quedan últimos.</p>
-            <RouterLink to="/debates" class="inline-block font-medium text-brand">Ir a debates</RouterLink>
-          </div>
-
-          <div v-else-if="account.tab === 'acerca'" class="space-y-3 text-sm leading-relaxed text-slate-700">
-            <p>
-              Coordino la mesa de movilidad del barrio norte. Me importa que el horario real del bus y el agua queden escritos antes de votar.
-            </p>
-            <p>Territorio: barrio norte. Mesa: movilidad y cuidados.</p>
-          </div>
-
-          <div v-else-if="account.tab === 'medios'" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <img v-for="item in profilePhotos" :key="item.id" :src="item.image" :alt="item.label" class="h-28 w-full rounded-lg object-cover" />
-          </div>
-
-          <div v-else-if="account.tab === 'videos'" class="text-sm text-slate-700">
-            <p>La audiencia del presupuesto tiene una vista previa en el inicio. El archivo se publica cuando la fuente esté verificada.</p>
-            <RouterLink to="/" class="mt-3 inline-block font-medium text-brand">Ver el inicio</RouterLink>
-          </div>
-
-          <div v-else-if="account.tab === 'convocatorias'" class="text-sm text-slate-700">
-            <p>Hay votaciones abiertas sobre el presupuesto, el horario del mercado y el punto de cuidado.</p>
-            <RouterLink to="/votaciones" class="mt-3 inline-block font-medium text-brand">Ir a votaciones</RouterLink>
-          </div>
-
-          <div v-else-if="account.tab === 'actividad'">
-            <ParticipationSummary v-if="auth.isAuthenticated" />
-            <p v-else class="text-sm text-slate-700">
-              Entra para ver tu participación.
-              <RouterLink to="/ingresar" class="font-medium text-brand">Ingresar</RouterLink>
-            </p>
-          </div>
+          <p v-if="account.tab === 'publicaciones'" class="text-sm text-slate-700">Esta cuenta todavía no tiene publicaciones.</p>
+          <p v-else-if="account.tab === 'acerca'" class="min-h-6 text-sm text-slate-700"></p>
+          <div v-else-if="account.tab === 'medios'" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+          <p v-else-if="account.tab === 'videos'" class="min-h-6 text-sm text-slate-700"></p>
+          <p v-else-if="account.tab === 'convocatorias'" class="min-h-6 text-sm text-slate-700"></p>
+          <ParticipationSummary v-else-if="account.tab === 'actividad' && auth.isAuthenticated" />
+          <p v-else class="text-sm text-slate-700">Entra para ver tu participación.</p>
         </div>
       </div>
 
       <ConnectionList
-        v-if="account.tab === 'conexiones'"
-        :people="account.visibleConnections"
-        :total="account.connections.length"
+        v-if="account.tab === 'conexiones' && auth.isAuthenticated"
+        :people="account.visiblePeople"
+        :total="account.listedPeople.length"
         :expanded="account.showAllConnections"
+        :loading="account.peopleLoading"
+        :error="account.peopleError"
+        :query="account.peopleQuery"
+        @update:query="account.peopleQuery = $event"
+        @search="account.loadPeople()"
         @remove="account.removeConnection"
         @message="account.message"
         @expand="account.showAllConnections = true"
       />
+      <section
+        v-else-if="account.tab === 'conexiones'"
+        class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80 sm:p-5"
+      >
+        <h2 class="text-lg font-semibold">Conexiones</h2>
+        <p class="py-6 text-sm text-slate-600">Entra para ver personas que ya están registradas.</p>
+      </section>
     </div>
 
     <aside class="min-w-0 space-y-4">
       <section class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
         <h2 class="font-semibold">Acerca de</h2>
-        <p class="mt-2 text-sm leading-relaxed text-slate-600">
-          Coordino la mesa de movilidad del barrio norte. Me importa que el horario real del bus y el agua queden escritos antes de votar.
-        </p>
+        <p class="mt-2 min-h-6 text-sm leading-relaxed text-slate-600"></p>
         <ul class="mt-4 space-y-2 text-sm text-slate-600">
           <li class="flex items-start gap-2">
             <AppIcon name="calendar" class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-            En la mesa desde 2019
+            <span v-if="joinedLabel">Se unió el {{ joinedLabel }}</span>
           </li>
           <li class="flex items-start gap-2">
             <AppIcon name="pin" class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-            Barrio norte
           </li>
           <li class="flex items-start gap-2">
             <AppIcon name="users" class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-            Mesa de movilidad
           </li>
         </ul>
       </section>
@@ -243,22 +262,18 @@ const toneClass = {
             {{ account.showAllPhotos ? 'Ver menos' : 'Ver todas las fotos' }}
           </button>
         </div>
-        <ul class="mt-3 grid grid-cols-2 gap-2" :class="account.showAllPhotos ? 'sm:grid-cols-3' : ''">
-          <li v-for="item in account.showAllPhotos ? profilePhotos : profilePhotos.slice(0, 5)" :key="item.id">
-            <img :src="item.image" :alt="item.label" class="h-24 w-full rounded-lg object-cover" />
-          </li>
-        </ul>
+        <ul class="mt-3 grid grid-cols-2 gap-2" :class="account.showAllPhotos ? 'sm:grid-cols-3' : ''"></ul>
       </section>
 
       <section class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
         <div class="flex items-center justify-between">
           <h2 class="font-semibold">
             Amigos
-            <span class="ml-1 rounded bg-rose-50 px-1.5 text-sm text-rose-600">{{ account.friends.length }}</span>
+            <span class="ml-1 rounded bg-rose-50 px-1.5 text-sm text-rose-600">0</span>
           </h2>
         </div>
         <div class="mt-3">
-          <FriendGrid :people="account.friends" :following="account.following" @message="account.message" @follow="account.toggleFollow" />
+          <FriendGrid :people="[]" :following="account.following" @message="account.message" @follow="account.toggleFollow" />
         </div>
       </section>
     </aside>

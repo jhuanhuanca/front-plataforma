@@ -25,7 +25,7 @@ export function homeCards(debates: DebatePost[], news: NewsItem[], polls: Poll[]
 function debateCard(debate: DebatePost): Topic {
   return {
     id: debate.id,
-    category: debateCategory(debate.role),
+    category: debateCategory(debate.role, debate.category),
     title: debate.body,
     image: debate.image,
     likes: debate.likes,
@@ -70,7 +70,11 @@ function pollCard(poll: Poll): Topic {
   }
 }
 
-function debateCategory(role: string): Topic['category'] {
+function debateCategory(role: string, category?: DebatePost['category']): Topic['category'] {
+  if (category === 'politica' || category === 'territorio' || category === 'economia') {
+    return category
+  }
+
   const text = role.toLowerCase()
   if (text.includes('movilidad') || text.includes('territorio')) {
     return 'territorio'

@@ -6,6 +6,7 @@ export interface AuthUser {
   nick: string
   avatar?: string | null
   cover?: string | null
+  created_at?: string | null
 }
 
 export interface AuthSession {
@@ -22,6 +23,7 @@ export interface RegisterPayload {
   email: string
   nick: string
   department: string
+  municipality: string
   birth_year: number
   password: string
   password_confirmation: string

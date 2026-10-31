@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import type { ProfileFriend } from '../../data/profile'
+import PersonMark from '../ui/PersonMark.vue'
 import AppIcon from '../ui/AppIcon.vue'
 
+export interface AccountFriend {
+  id: string
+  name: string
+  nick: string
+  mutual: string
+  avatar: string
+}
+
 defineProps<{
-  people: ProfileFriend[]
+  people: AccountFriend[]
   following: string[]
 }>()
 
@@ -16,7 +24,7 @@ const emit = defineEmits<{
 <template>
   <ul class="grid grid-cols-2 gap-3">
     <li v-for="person in people" :key="person.id" class="rounded-xl border border-slate-200 p-3 text-center">
-      <img :src="person.avatar" alt="" class="mx-auto h-16 w-16 rounded-full object-cover" />
+      <PersonMark :src="person.avatar" :label="person.name" class="mx-auto h-16 w-16 rounded-full" />
       <p class="mt-2 text-sm font-semibold">{{ person.name }}</p>
       <p class="text-xs text-slate-500">{{ person.mutual }}</p>
       <div class="mt-3 flex justify-center gap-2">

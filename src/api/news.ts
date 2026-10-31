@@ -1,5 +1,4 @@
 import { api } from './client'
-import { sideNews } from '../data/debates'
 
 export interface NewsItem {
   id: string
@@ -33,17 +32,6 @@ export async function fetchNewsItem(id: string): Promise<NewsItem> {
   const response = await api.get<Envelope<NewsPayload>>(`/news/${id}`)
 
   return toItem(response.data.data)
-}
-
-export function localNews(): NewsItem[] {
-  return sideNews.map((item) => ({
-    id: item.id,
-    title: item.title,
-    summary: '',
-    source: 'Edición local',
-    time: item.time,
-    debateId: null,
-  }))
 }
 
 function toItem(item: NewsPayload): NewsItem {

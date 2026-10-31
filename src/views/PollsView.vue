@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { pollCategories, type Poll } from '../data/polls'
-import { photo } from '../data/images'
+import HeroStage from '../components/layout/HeroStage.vue'
 import AppIcon from '../components/ui/AppIcon.vue'
 import { usePollStore } from '../stores/polls'
 
@@ -42,18 +42,11 @@ async function choose(pollId: string, optionId: string): Promise<void> {
 
 <template>
   <div>
-    <section class="relative isolate min-h-[420px] overflow-hidden">
-      <div class="absolute inset-0 grid grid-cols-4 grid-rows-2">
-        <img :src="photo('photo-1492684223066-81342ee5ff30', 800)" alt="" class="col-span-2 row-span-2 h-full w-full object-cover" />
-        <img :src="photo('photo-1514525253161-7a46d19cd819', 600)" alt="" class="h-full w-full object-cover" />
-        <img :src="photo('photo-1429962714451-bb934ecdc4ec', 600)" alt="" class="h-full w-full object-cover" />
-        <img :src="photo('photo-1501281668745-f7f57925c3b4', 600)" alt="" class="h-full w-full object-cover" />
-        <img :src="photo('photo-1470229722913-7c0e2dbbafd3', 600)" alt="" class="h-full w-full object-cover" />
-      </div>
-      <div class="absolute inset-0 bg-slate-950/60"></div>
-
+    <section class="relative isolate min-h-[420px] overflow-hidden bg-brand">
+      <HeroStage v-slot="{ announcement }" place="polls">
       <div class="relative mx-auto flex min-h-[460px] max-w-3xl flex-col items-center justify-center px-4 py-10 text-center text-white sm:min-h-[420px] sm:py-16">
         <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Vota las propuestas abiertas</h1>
+        <p v-if="announcement" class="mt-2 max-w-md text-sm font-semibold text-white">{{ announcement }}</p>
         <p class="mt-2 max-w-md text-sm text-white/85">
           {{ polls.remote ? 'Elige una opción. El voto queda en tu cuenta.' : 'Elige una opción. Tu voto queda en este dispositivo hasta que la cuenta esté conectada.' }}
         </p>
@@ -81,6 +74,7 @@ async function choose(pollId: string, optionId: string): Promise<void> {
           </div>
         </form>
       </div>
+      </HeroStage>
     </section>
 
     <div class="mx-auto max-w-[1100px] bg-white px-4 py-6 sm:bg-transparent sm:py-8">

@@ -6,7 +6,7 @@ import { fetchDebates, fetchNewerDebates, toggleDebateReaction } from '../api/de
 import { fetchMetrics, type PublicMetrics } from '../api/metrics'
 import { fetchNews } from '../api/news'
 import { fetchPolls } from '../api/polls'
-import { topics, type HomeCategory, type Topic } from '../data/home'
+import type { HomeCategory, Topic } from '../data/home'
 import { homeCards, placeLiveDebates } from '../lib/homeFeed'
 
 export const useHomeStore = defineStore('home', () => {
@@ -48,16 +48,12 @@ export const useHomeStore = defineStore('home', () => {
       polls.status === 'fulfilled' ? polls.value : [],
     )
 
-    if (loaded.length === 0) {
-      cards.value = topics.map((topic) => ({ ...topic }))
-      remote.value = false
-      loadError.value = 'No se pudo cargar el inicio. Se muestran los temas de ejemplo.'
-    } else {
-      cards.value = loaded
-      remote.value = true
-      if (debates.status === 'rejected' || news.status === 'rejected' || polls.status === 'rejected') {
-        loadError.value = 'Una parte del inicio no cargó. Se muestra lo que sí está disponible.'
-      }
+    cards.value = loaded
+    remote.value = debates.status === 'fulfilled'
+    if (loaded.length === 0 && debates.status === 'rejected' && news.status === 'rejected' && polls.status === 'rejected') {
+      loadError.value = 'No se pudo cargar el inicio.'
+    } else if (debates.status === 'rejected' || news.status === 'rejected' || polls.status === 'rejected') {
+      loadError.value = 'Una parte del inicio no cargó. Se muestra lo que sí está disponible.'
     }
 
     loading.value = false

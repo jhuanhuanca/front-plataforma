@@ -1,49 +1,66 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import {
-  profileConnections,
-  profileExperience,
-  profileFriends,
-  type AccountTab,
-  type ProfileExperience,
-} from '../data/profile'
+import { fetchPeople, type RegisteredPerson } from '../api/people'
+import type { AccountTab } from '../data/profile'
+
+export interface AccountExperience {
+  id: string
+  place: string
+  detail: string
+  tone: 'emerald' | 'rose' | 'amber'
+}
 
 export const useAccountStore = defineStore('account', () => {
-  const name = ref('Mateo Ríos')
   const tab = ref<AccountTab>('conexiones')
-  const connections = ref(structuredClone(profileConnections))
-  const friends = ref(structuredClone(profileFriends))
-  const experiences = ref<ProfileExperience[]>(structuredClone(profileExperience))
-  const following = ref<string[]>([])
+  const people = ref<RegisteredPerson[]>([])
+  const hiddenIds = ref<number[]>([])
+  const peopleQuery = ref('')
+  const peopleLoading = ref(false)
+  const peopleError = ref('')
   const showAllConnections = ref(false)
   const showAllPhotos = ref(false)
   const notice = ref('')
   const chatNick = ref('')
   const chatRequest = ref(0)
+  const experiences = ref<AccountExperience[]>([])
   const experienceDraft = ref('')
   const addingExperience = ref(false)
+  const following = ref<string[]>([])
 
-  const visibleConnections = computed(() => {
+  const listedPeople = computed(() => people.value.filter((person) => !hiddenIds.value.includes(person.id)))
+
+  const visiblePeople = computed(() => {
     if (showAllConnections.value) {
-      return connections.value
+      return listedPeople.value
     }
 
-    return connections.value.slice(0, 4)
+    return listedPeople.value.slice(0, 4)
   })
 
-  function saveName(next: string): void {
-    const text = next.trim()
-    if (text.length < 3) {
-      notice.value = 'El nombre visible necesita al menos 3 caracteres.'
+  async function loadPeople(): Promise<void> {
+    if (localStorage.getItem('auth_token') === null) {
+      people.value = []
+      peopleError.value = ''
       return
     }
 
-    name.value = text
-    notice.value = 'Nombre visible actualizado en este navegador.'
+    peopleLoading.value = true
+    peopleError.value = ''
+
+    try {
+      people.value = await fetchPeople(peopleQuery.value)
+    } catch {
+      people.value = []
+      peopleError.value = 'No se pudo cargar a las personas registradas.'
+    } finally {
+      peopleLoading.value = false
+    }
   }
 
-  function removeConnection(id: string): void {
-    connections.value = connections.value.filter((person) => person.id !== id)
+  function removeConnection(id: number): void {
+    if (!hiddenIds.value.includes(id)) {
+      hiddenIds.value.push(id)
+    }
     notice.value = 'Conexión quitada de esta lista.'
   }
 
@@ -77,30 +94,32 @@ export const useAccountStore = defineStore('account', () => {
     experiences.value.unshift({
       id: `local-${Date.now()}`,
       place: text,
-      detail: 'Añadido ahora · Participación local.',
+      detail: '',
       tone: 'emerald',
     })
     experienceDraft.value = ''
     addingExperience.value = false
-    notice.value = 'Experiencia añadida en este navegador.'
+    notice.value = ''
   }
 
   return {
-    name,
     tab,
-    connections,
-    friends,
-    experiences,
-    following,
+    people,
+    peopleQuery,
+    peopleLoading,
+    peopleError,
     showAllConnections,
     showAllPhotos,
     notice,
     chatNick,
     chatRequest,
+    experiences,
     experienceDraft,
     addingExperience,
-    visibleConnections,
-    saveName,
+    following,
+    listedPeople,
+    visiblePeople,
+    loadPeople,
     removeConnection,
     message,
     toggleFollow,

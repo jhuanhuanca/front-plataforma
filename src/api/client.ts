@@ -46,6 +46,7 @@ api.interceptors.response.use(
         localStorage.removeItem('auth_user_id')
         localStorage.removeItem('auth_avatar')
         localStorage.removeItem('auth_cover')
+        localStorage.removeItem('auth_joined')
       }
 
       if (!authAttempt && window.location.pathname !== '/ingresar') {

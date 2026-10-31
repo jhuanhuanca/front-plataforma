@@ -1,23 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { activeTopics } from '../data/debates'
-import { photo } from '../data/images'
 import DebateCard from '../components/debate/DebateCard.vue'
+import PersonMark from '../components/ui/PersonMark.vue'
 import ArgumentEditor from '../components/debate/ArgumentEditor.vue'
 import MediaAttachment from '../components/debate/MediaAttachment.vue'
 import BrandLogo from '../components/brand/BrandLogo.vue'
 import AppIcon from '../components/ui/AppIcon.vue'
 import { sendToRegister } from '../lib/accountGate'
 import { mediaUrl } from '../lib/mediaUrl'
+import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
 import { useDebateStore } from '../stores/debates'
 import { useNewsStore } from '../stores/news'
 
 const debates = useDebateStore()
+const account = useAccountStore()
 const auth = useAuthStore()
-const sessionAvatar = computed(() => mediaUrl(auth.avatar) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=160&q=70')
-const sessionCover = computed(() => mediaUrl(auth.cover) || photo('photo-1500530855697-b586d89ba3ee', 700))
+const sessionAvatar = computed(() => mediaUrl(auth.avatar))
+const sessionCover = computed(() => mediaUrl(auth.cover))
 const displayName = computed(() => (auth.isAuthenticated && auth.nick ? auth.nick : 'Invitado'))
 const news = useNewsStore()
 const route = useRoute()
@@ -172,6 +173,7 @@ async function onCommentLike(postId: string, commentId: string): Promise<void> {
 onMounted(() => {
   void debates.load().then(() => debates.followFeed())
   void news.load()
+  void account.loadPeople()
 })
 
 onUnmounted(() => {
@@ -193,13 +195,10 @@ async function share(id: string): Promise<void> {
   <div class="mx-auto grid w-full min-w-0 max-w-[1200px] gap-4 px-3 py-3 sm:px-4 sm:py-4 lg:grid-cols-[270px_minmax(0,1fr)_300px]">
     <aside class="hidden space-y-4 lg:sticky lg:top-20 lg:block lg:self-start">
       <section class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200/80">
-        <img :src="sessionCover" alt="" class="h-16 w-full object-cover" />
+        <img v-if="sessionCover" :src="sessionCover" alt="" class="h-16 w-full object-cover" />
+        <div v-else class="h-16 bg-brand"></div>
         <div class="-mt-8 px-4 pb-4 text-center">
-          <img
-            :src="sessionAvatar"
-            alt=""
-            class="mx-auto h-16 w-16 rounded-full object-cover ring-4 ring-white"
-          />
+          <PersonMark :src="sessionAvatar" :label="displayName" class="mx-auto h-16 w-16 rounded-full text-xl ring-4 ring-white" />
           <h2 class="mt-2 text-lg font-semibold">{{ displayName }}</h2>
           <p class="text-xs text-slate-500">{{ auth.isAuthenticated ? 'Sesión en este dispositivo' : 'Aún sin nick' }}</p>
           <p v-if="!auth.isAuthenticated" class="mt-2 text-sm text-slate-600">Entra para argumentar, votar y seguir un tema.</p>
@@ -249,30 +248,9 @@ async function share(id: string): Promise<void> {
         {{ notice }}
       </p>
 
-      <div class="min-w-0 overflow-hidden rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
-        <ul class="flex max-w-full gap-4 overflow-x-auto pb-1">
-          <li class="w-24 shrink-0 text-center">
-            <button type="button" class="grid h-24 w-full place-items-center rounded-xl bg-canvas text-slate-500" @click="draft = ''">
-              <span class="grid h-10 w-10 place-items-center rounded-full border border-dashed border-slate-300">
-                <AppIcon name="plus" class="h-5 w-5" />
-              </span>
-            </button>
-            <p class="mt-2 text-xs font-medium">Abrir un tema</p>
-          </li>
-          <li v-for="person in activeTopics" :key="person.id" class="w-24 shrink-0">
-            <img :src="person.avatar" alt="" class="h-24 w-full rounded-xl object-cover" />
-            <p class="mt-2 truncate text-center text-xs font-medium">{{ person.name }}</p>
-          </li>
-        </ul>
-      </div>
-
       <form class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80" @submit.prevent="publish">
         <div class="flex gap-3">
-          <img
-            :src="sessionAvatar"
-            alt=""
-            class="h-10 w-10 rounded-full object-cover"
-          />
+          <PersonMark :src="sessionAvatar" :label="displayName" class="h-10 w-10 shrink-0 rounded-full" />
           <ArgumentEditor id="nuevo-argumento" v-model="draft" label="Escribe un argumento" placeholder="Escribe un argumento..." />
         </div>
         <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
@@ -346,28 +324,30 @@ async function share(id: string): Promise<void> {
 
     <aside class="hidden space-y-4 lg:sticky lg:top-20 lg:block lg:self-start">
       <section class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
-        <h2 class="font-semibold">Voces para seguir</h2>
-        <ul class="mt-3 space-y-3">
-          <li v-for="person in debates.people" :key="person.id" class="flex items-center gap-3">
-            <img :src="person.avatar" alt="" class="h-10 w-10 rounded-full object-cover" />
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold">{{ person.name }}</p>
-              <p class="truncate text-xs text-slate-500">{{ person.role }}</p>
-            </div>
+        <h2 class="font-semibold">Personas registradas</h2>
+        <p v-if="!auth.isAuthenticated" class="mt-3 text-sm text-slate-600">Entra para ver cuentas que ya existen.</p>
+        <p v-else-if="account.peopleLoading" class="mt-3 text-sm text-slate-600">Cargando personas...</p>
+        <p v-else-if="account.people.length === 0" class="mt-3 text-sm text-slate-600">Todavía no hay otras cuentas.</p>
+        <ul v-else class="mt-3 space-y-3">
+          <li v-for="person in account.people" :key="person.id" class="flex items-center gap-3">
+            <PersonMark :src="person.avatar" :label="person.nick" class="h-10 w-10 shrink-0 rounded-full" />
+            <p class="min-w-0 flex-1 truncate text-sm font-semibold">{{ person.nick }}</p>
             <button
               type="button"
-              class="grid h-8 w-8 place-items-center rounded-full"
-              :class="debates.following.includes(person.id) ? 'bg-brand text-white' : 'bg-brand-soft text-brand'"
-              :aria-pressed="debates.following.includes(person.id)"
-              :aria-label="debates.following.includes(person.id) ? `Dejar de seguir a ${person.name}` : `Seguir a ${person.name}`"
-              @click="debates.toggleFollow(person.id)"
+              class="rounded-md bg-brand-soft px-2 py-1 text-xs font-medium text-brand"
+              @click="account.message(person.nick)"
             >
-              <AppIcon :name="debates.following.includes(person.id) ? 'check' : 'plus'" class="h-4 w-4" />
+              Mensaje
             </button>
           </li>
         </ul>
-        <RouterLink to="/debates" class="mt-4 block w-full rounded-lg bg-brand-soft py-2 text-center text-sm font-medium text-brand">
-          Ver más
+        <RouterLink
+          v-if="auth.isAuthenticated"
+          to="/cuenta"
+          class="mt-4 block w-full rounded-lg bg-brand-soft py-2 text-center text-sm font-medium text-brand"
+          @click="account.tab = 'conexiones'"
+        >
+          Ver en tu cuenta
         </RouterLink>
       </section>
 

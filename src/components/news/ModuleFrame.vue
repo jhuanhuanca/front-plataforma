@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { photo } from '../../data/images'
-import { profileAvatar } from '../../data/profile'
 import { mediaUrl } from '../../lib/mediaUrl'
+import PersonMark from '../ui/PersonMark.vue'
 import AppIcon from '../ui/AppIcon.vue'
 import BrandLogo from '../brand/BrandLogo.vue'
 import { useAuthStore } from '../../stores/auth'
@@ -26,8 +25,8 @@ const menu = [
 ]
 
 const displayName = computed(() => (auth.isAuthenticated && auth.nick ? auth.nick : 'Invitado'))
-const sessionAvatar = computed(() => mediaUrl(auth.avatar) || profileAvatar)
-const sessionCover = computed(() => mediaUrl(auth.cover) || photo('photo-1500530855697-b586d89ba3ee', 700))
+const sessionAvatar = computed(() => mediaUrl(auth.avatar))
+const sessionCover = computed(() => mediaUrl(auth.cover))
 const withDebate = computed(() => news.items.filter((item) => item.debateId !== null).length)
 const sourceCount = computed(() => new Set(news.items.map((item) => item.source)).size)
 const onNews = computed(() => route.name === 'news' || route.name === 'news-item')
@@ -43,9 +42,10 @@ onMounted(() => {
   <div class="mx-auto grid w-full min-w-0 max-w-[1200px] gap-4 px-3 py-3 sm:px-4 sm:py-4 lg:grid-cols-[270px_minmax(0,1fr)_300px]">
     <aside class="hidden space-y-4 lg:sticky lg:top-20 lg:block lg:self-start">
       <section class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200/80">
-        <img :src="sessionCover" alt="" class="h-16 w-full object-cover" />
+        <img v-if="sessionCover" :src="sessionCover" alt="" class="h-16 w-full object-cover" />
+        <div v-else class="h-16 bg-brand"></div>
         <div class="-mt-8 px-4 pb-4 text-center">
-          <img :src="sessionAvatar" alt="" class="mx-auto h-16 w-16 rounded-full object-cover ring-4 ring-white" />
+          <PersonMark :src="sessionAvatar" :label="displayName" class="mx-auto h-16 w-16 rounded-full text-xl ring-4 ring-white" />
           <h2 class="mt-2 text-lg font-semibold">{{ displayName }}</h2>
           <p class="text-xs text-slate-500">
             {{ auth.isAuthenticated ? 'Sesión en este dispositivo' : 'Aún sin nick' }}

@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import axios from 'axios'
-import { fetchNews, fetchNewsItem, localNews, type NewsItem } from '../api/news'
+import { fetchNews, fetchNewsItem, type NewsItem } from '../api/news'
 
 export const useNewsStore = defineStore('news', () => {
   const items = ref<NewsItem[]>([])
@@ -22,9 +22,9 @@ export const useNewsStore = defineStore('news', () => {
       items.value = await fetchNews()
       remote.value = true
     } catch {
-      items.value = localNews()
+      items.value = []
       remote.value = false
-      loadError.value = 'No se pudieron cargar las noticias. Se muestra la edición de ejemplo.'
+      loadError.value = 'No se pudieron cargar las noticias.'
     } finally {
       loading.value = false
     }

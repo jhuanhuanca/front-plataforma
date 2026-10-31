@@ -1,6 +1,5 @@
 import { mediaUrl } from '../lib/mediaUrl'
 import { api } from './client'
-import { photo } from '../data/images'
 import type { DebateComment, DebatePost } from '../data/debates'
 
 interface DebateAuthor {
@@ -29,6 +28,7 @@ export interface DebatePayload {
   image: string | null
   kind: string
   context: string | null
+  category?: string | null
   likes: number
   shares: number
   liked: boolean
@@ -51,26 +51,6 @@ export interface LivePage<T> {
   items: T[]
   latest: number
   more: boolean
-}
-
-const knownNames: Record<string, string> = {
-  clara_rivas: 'Clara Rivas',
-  elena_cruz: 'Elena Cruz',
-  luis_navarro: 'Luis Navarro',
-  andres_palma: 'Andrés Palma',
-  ivan_paredes: 'Iván Paredes',
-  rosa_aguilar: 'Rosa Aguilar',
-  marta_quispe: 'Marta Quispe',
-}
-
-const knownAvatars: Record<string, string> = {
-  clara_rivas: photo('photo-1494790108377-be9c29b29330', 160),
-  elena_cruz: photo('photo-1531123897727-8f129e1688ce', 160),
-  luis_navarro: photo('photo-1507003211169-0a1dd7228f2d', 160),
-  andres_palma: photo('photo-1500648767791-00dcc994a43e', 160),
-  ivan_paredes: photo('photo-1506794778202-cad84cf45f1d', 160),
-  rosa_aguilar: photo('photo-1438761681033-6461ffad8d80', 160),
-  marta_quispe: photo('photo-1544005313-94ddf0286df2', 160),
 }
 
 export async function fetchDebates(): Promise<DebatePost[]> {
@@ -253,7 +233,10 @@ function toPost(topic: DebatePayload): DebatePost {
     id: String(topic.id),
     author: presentName(nick),
     role: topic.context ?? 'Participante',
-    avatar: mediaUrl(topic.author.avatar) || avatarFor(nick),
+    category: topic.category === 'politica' || topic.category === 'territorio' || topic.category === 'economia'
+      ? topic.category
+      : null,
+    avatar: mediaUrl(topic.author.avatar),
     time: relativeTime(topic.created_at),
     body: topic.body,
     image: mediaUrl(topic.image),
@@ -273,7 +256,7 @@ function toComment(argument: DebateArgumentPayload): DebateComment {
   return {
     id: String(argument.id),
     author: presentName(nick),
-    avatar: mediaUrl(argument.author.avatar) || avatarFor(nick),
+    avatar: mediaUrl(argument.author.avatar),
     time: relativeTime(argument.created_at),
     body: argument.body,
     likes: argument.likes,
@@ -298,19 +281,7 @@ function numericId(value: string): number {
 }
 
 function presentName(nick: string): string {
-  const known = knownNames[nick]
-  if (known) {
-    return known
-  }
-
   return nick
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
-}
-
-function avatarFor(nick: string): string {
-  return knownAvatars[nick] ?? photo('photo-1535713875002-d1d0cf377fde', 160)
 }
 
 function relativeTime(value: string | null): string {

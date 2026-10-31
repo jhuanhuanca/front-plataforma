@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { DebateComment, DebatePost } from '../../data/debates'
 import AppIcon from '../ui/AppIcon.vue'
 import ArgumentBody from './ArgumentBody.vue'
+import PersonMark from '../ui/PersonMark.vue'
 import ArgumentVotes from './ArgumentVotes.vue'
 import ReportControl from '../moderation/ReportControl.vue'
 
@@ -97,7 +98,7 @@ function replyCount(comment: DebateComment): number {
 <template>
   <article class="min-w-0 max-w-full overflow-hidden rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
     <header class="flex items-start gap-3">
-      <img :src="post.avatar" alt="" class="h-11 w-11 rounded-full object-cover" />
+      <PersonMark :src="post.avatar" :label="post.author" class="h-11 w-11 shrink-0 rounded-full" />
       <div class="min-w-0 flex-1">
         <h2 class="text-sm font-semibold text-slate-900">
           <RouterLink v-if="threadTo" :to="threadTo" class="hover:text-brand">{{ post.author }}</RouterLink>
@@ -188,7 +189,7 @@ function replyCount(comment: DebateComment): number {
     <ul class="mt-4 space-y-4">
       <li v-for="comment in post.comments" :key="comment.id">
         <div class="flex gap-3">
-          <img :src="comment.avatar" alt="" class="h-9 w-9 rounded-full object-cover" />
+          <PersonMark :src="comment.avatar" :label="comment.author" class="h-9 w-9 shrink-0 rounded-full" />
           <div class="min-w-0 flex-1">
             <div class="rounded-xl bg-canvas px-3 py-2">
               <p class="text-sm">
@@ -234,7 +235,7 @@ function replyCount(comment: DebateComment): number {
             <p v-if="replyingTo === comment.id && replyError" class="mt-1 text-xs text-red-700" role="alert">{{ replyError }}</p>
             <ul v-if="repliesVisible(comment.id)" class="mt-3 space-y-3 pl-2">
               <li v-for="reply in comment.replies" :key="reply.id" class="flex gap-2">
-                <img :src="reply.avatar" alt="" class="h-8 w-8 rounded-full object-cover" />
+                <PersonMark :src="reply.avatar" :label="reply.author" class="h-8 w-8 shrink-0 rounded-full" />
                 <div class="rounded-xl bg-canvas px-3 py-2">
                   <p class="text-sm font-semibold">
                     {{ reply.author }}

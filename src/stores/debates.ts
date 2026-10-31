@@ -22,7 +22,7 @@ import {
   toggleDebateReaction,
   castArgumentVote,
 } from '../api/debates'
-import { posts, voices, type DebateComment, type DebatePost } from '../data/debates'
+import type { DebateComment, DebatePost } from '../data/debates'
 
 interface ActionResult {
   ok: boolean
@@ -41,7 +41,6 @@ export const useDebateStore = defineStore('debates', () => {
   const detailError = ref('')
   const remote = ref(false)
   const opened = computed(() => items.value.find((post) => post.id === openedId.value) ?? null)
-  const people = voices
 
   const visible = computed(() => {
     const text = query.value.trim().toLowerCase()
@@ -62,9 +61,9 @@ export const useDebateStore = defineStore('debates', () => {
       items.value = await fetchDebates()
       remote.value = true
     } catch {
-      items.value = structuredClone(posts)
+      items.value = []
       remote.value = false
-      loadError.value = 'No se pudo cargar el feed. Se muestran los debates de ejemplo.'
+      loadError.value = 'No se pudo cargar el feed.'
     } finally {
       loading.value = false
     }
@@ -533,7 +532,6 @@ export const useDebateStore = defineStore('debates', () => {
     items,
     visible,
     query,
-    people,
     following,
     loading,
     loadError,

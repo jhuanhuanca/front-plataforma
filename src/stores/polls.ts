@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import { firstApiMessage, readApiErrors } from '../api/auth'
 import { castPollVote, fetchPolls } from '../api/polls'
-import { polls, type Poll, type PollCategory } from '../data/polls'
+import type { Poll, PollCategory } from '../data/polls'
 
 interface ActionResult {
   ok: boolean
@@ -41,9 +41,9 @@ export const usePollStore = defineStore('polls', () => {
       items.value = await fetchPolls()
       remote.value = true
     } catch {
-      items.value = structuredClone(polls)
+      items.value = []
       remote.value = false
-      loadError.value = 'No se pudieron cargar las votaciones. Se muestran las de ejemplo.'
+      loadError.value = 'No se pudieron cargar las votaciones.'
     } finally {
       loading.value = false
     }

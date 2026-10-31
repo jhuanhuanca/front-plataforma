@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BrandLogo from '../components/brand/BrandLogo.vue'
 import { departments } from '../data/departments'
+import { municipalitiesOf } from '../data/municipalities'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -14,6 +15,8 @@ const name = ref('')
 const email = ref('')
 const nick = ref('')
 const department = ref('')
+const municipality = ref('')
+const municipalityOptions = computed(() => municipalitiesOf(department.value))
 const birthYear = ref('')
 const password = ref('')
 const passwordConfirmation = ref('')
@@ -22,6 +25,12 @@ const consentMetrics = ref(false)
 
 const nickPattern = /^[a-zA-Z0-9_]+$/
 const adultYear = computed(() => new Date().getFullYear() - 18)
+
+watch(department, () => {
+  if (!municipalityOptions.value.includes(municipality.value)) {
+    municipality.value = ''
+  }
+})
 
 function choose(next: 'login' | 'register'): void {
   mode.value = next
@@ -61,6 +70,9 @@ function validateRegister(): boolean {
   }
   if (!departments.includes(department.value as (typeof departments)[number])) {
     return setField('department', 'Elige un departamento de la lista.')
+  }
+  if (!municipalityOptions.value.includes(municipality.value)) {
+    return setField('municipality', 'Elige un municipio de ese departamento.')
   }
   const year = Number(birthYear.value)
   if (!Number.isInteger(year) || year < 1900 || year > adultYear.value) {
@@ -103,6 +115,7 @@ async function submit(): Promise<void> {
       email: email.value.trim(),
       nick: nick.value.trim(),
       department: department.value,
+      municipality: municipality.value,
       birth_year: Number(birthYear.value),
       password: password.value,
       password_confirmation: passwordConfirmation.value,
@@ -140,7 +153,7 @@ async function logout(): Promise<void> {
       <BrandLogo class="mx-auto mb-4" />
       <h1 class="text-3xl font-semibold tracking-tight">Cuenta</h1>
       <p class="mt-3 text-sm leading-relaxed text-slate-600">
-        Para comentar hace falta una cuenta. El registro pide nombre, correo, nick, departamento, contraseña y año de nacimiento. Solo pueden crear cuenta las personas de 18 años o más.
+        Para comentar hace falta una cuenta. El registro pide nombre, correo, nick, departamento, municipio, contraseña y año de nacimiento. Solo pueden crear cuenta las personas de 18 años o más.
       </p>
       <p
         v-if="route.query.aviso === 'cuenta-borrada'"
@@ -259,6 +272,23 @@ async function logout(): Promise<void> {
             <option v-for="item in departments" :key="item" :value="item">{{ item }}</option>
           </select>
           <p v-if="fieldMessage('department')" class="mt-1 text-sm text-red-700">{{ fieldMessage('department') }}</p>
+        </div>
+
+        <div v-if="mode === 'register'">
+          <label class="text-sm font-medium" for="municipio">Municipio</label>
+          <select
+            id="municipio"
+            v-model="municipality"
+            name="municipality"
+            required
+            :disabled="municipalityOptions.length === 0"
+            class="mt-1 h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-brand disabled:bg-slate-50"
+            :aria-invalid="Boolean(fieldMessage('municipality'))"
+          >
+            <option value="" disabled>{{ municipalityOptions.length === 0 ? 'Elige primero un departamento' : 'Elige un municipio' }}</option>
+            <option v-for="item in municipalityOptions" :key="item" :value="item">{{ item }}</option>
+          </select>
+          <p v-if="fieldMessage('municipality')" class="mt-1 text-sm text-red-700">{{ fieldMessage('municipality') }}</p>
         </div>
 
         <div v-if="mode === 'register'">

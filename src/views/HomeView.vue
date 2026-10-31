@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { homeTabs } from '../data/home'
-import { photo } from '../data/images'
+import HeroStage from '../components/layout/HeroStage.vue'
 import TopicCard from '../components/news/TopicCard.vue'
 import AppIcon from '../components/ui/AppIcon.vue'
 import { useHomeStore } from '../stores/home'
@@ -38,13 +38,8 @@ async function like(id: string): Promise<void> {
 
 <template>
   <div>
-    <section class="relative isolate min-h-[300px] overflow-hidden sm:min-h-[340px]">
-      <img
-        :src="photo('photo-1507525428034-b723cf961d3e', 1800)"
-        alt=""
-        class="absolute inset-0 h-full w-full object-cover"
-      />
-      <div class="absolute inset-0 bg-brand/70"></div>
+    <section class="relative isolate min-h-[300px] overflow-hidden bg-brand sm:min-h-[340px]">
+      <HeroStage v-slot="{ announcement }" place="home">
       <div class="relative mx-auto flex min-h-[300px] max-w-3xl flex-col items-center justify-center px-4 py-10 text-center text-white sm:min-h-[340px] sm:py-16">
         <h1 class="text-3xl font-bold tracking-tight sm:text-5xl">
           Lo que pasa. Lo que piensas.
@@ -53,6 +48,7 @@ async function like(id: string): Promise<void> {
         <p class="mt-3 max-w-xl text-sm font-medium text-white/95 sm:text-base">
           Conversaciones que construyen mejores decisiones.
         </p>
+        <p v-if="announcement" class="mt-3 max-w-xl text-sm font-semibold text-white">{{ announcement }}</p>
         <form class="mt-6 w-full max-w-xl" role="search" @submit.prevent="submitSearch">
           <label class="sr-only" for="buscar-inicio">Buscar temas</label>
           <div class="flex items-center rounded-md bg-white px-3 shadow-lg">
@@ -69,6 +65,7 @@ async function like(id: string): Promise<void> {
           <p v-if="searchError" class="mt-2 text-sm text-white" role="alert">{{ searchError }}</p>
         </form>
       </div>
+      </HeroStage>
     </section>
 
     <div class="mx-auto max-w-[1100px] px-3 py-5 sm:px-4 sm:py-8">
